@@ -11,3 +11,13 @@ print(type(price))
 # Try vectorbt rolling
 fast_sma = price.rolling(window=5).mean()
 print(fast_sma.head())
+
+
+
+# summary = dataset_info_summary(df, name="QQU ETF")
+# for key, val in summary.items():
+#     print(f"\n=== {key.upper()} ===")
+#     print(val)
+
+# # Get system info
+# system_info()

@@ -3,79 +3,101 @@ print("vectorbt version:", vbt.__version__)
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-def data_from_csv(file_path: str):
-
-    df = pd.read_csv(file_path)
-
-    # Convert 'Date' to datetime and set as index
-    df['Date'] = pd.to_datetime(df['Date'], format='%m/%d/%Y')
-    df.set_index('Date', inplace=True)
-
-    # Remove commas and convert columns
-    df['Vol.'] = df['Vol.'].str.replace('M', 'e6').str.replace('K', 'e3').str.replace(',', '')
-    df['Vol.'] = df['Vol.'].astype(float)
-    df['Change %'] = df['Change %'].str.replace('%', '').astype(float) / 100
-
-    # Convert remaining numeric columns
-    cols_to_float = ['Price', 'Open', 'High', 'Low']
-    df[cols_to_float] = df[cols_to_float].astype(float)
-
-    # Optional: rename columns for vectorbt convention
-    df.rename(columns={
-        'Price': 'Close',
-        'Vol.': 'Volume'
-    }, inplace=True)
-
-    # Sort by date (oldest to newest)
-    df = df.sort_index()
-
-    return df
-
+from utils.eda_utils import dataset_info_summary, system_info
+from data.Data_PipLine import data_from_csv
+import strategy.SimpleStrategy as ss
+import plotly.graph_objects as go
 QQU = r"C:\Users\wzhou\Desktop\Model\data\qqu\QQU ETF Stock Price History.csv"
-
 df = data_from_csv(QQU)
-
-
 price = df['Close']
 
-fast_sma = price.rolling(window=9).mean()
-slow_sma = price.rolling(window=20).mean()
 
+def compare_strategies(**strategies):
+    portfolios = []
+    legends = []
 
-# print(df.head())          # First 5 rows
-# print(df.tail())          # Last 5 rows
-# print(price.head())       # Close price series preview
-print(df.dtypes)
-print(df.info())          # Column types, non-null counts
-print(df.describe())      # Summary stats (mean, std, min, max, etc.)
-print(df.columns)
-print(df.isnull().sum())
-print(df.corr())
+    for name, strategy in strategies.items():
+        try:
+            strategy.run()
+            portfolios.append(strategy.portfolio)
+            legends.append(name)
+        except Exception as e:
+            print(f"❌ Error running strategy '{name}': {e}")
 
+    if not portfolios:
+        raise ValueError("No valid portfolios to compare.")
 
+    # ✅ Create a Plotly figure
+    fig = go.Figure()
 
-sns.heatmap(df.corr(), annot=True, cmap='coolwarm')
-plt.title("Correlation Heatmap")
-plt.show()
+    for pf, label in zip(portfolios, legends):
+            fig.add_trace(go.Scatter(
+                x=pf.value().index,
+                y=pf.value(),
+                mode='lines',
+                name=label
+            ))
 
+    fig.update_layout(
+        title="📈 Strategy Equity Curve Comparison",
+        xaxis_title="Date",
+        yaxis_title="Portfolio Value",
+        template="plotly_dark",
+        height=800
+    )
 
-plt.figure(figsize=(12, 6))
-plt.plot(price, label='Close Price', linewidth=1)
-plt.plot(fast_sma, label='9-day SMA', linestyle='--')
-plt.plot(slow_sma, label='20-day SMA', linestyle='--')
-plt.title('QQU ETF Price and SMA Crossover')
-plt.xlabel('Date')
-plt.ylabel('Price')
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.show()
+    fig.show()
 
+    # 📋 Optional: Stats comparison
+    stats_df = pd.concat(
+        [pf.stats().rename(lambda name: f"{legends[i]}: {name}") for i, pf in enumerate(portfolios)],
+        axis=1
+    )
+    print(stats_df)
 
+    return fig
+def compare_strategies_list(export_csv: str = None, **strategies):
+    portfolios = []
+    legends = []
 
-# entries = fast_sma > slow_sma
-# exits = fast_sma < slow_sma
+    for name, strat in strategies.items():
+        try:
+            strat.run()
+            portfolios.append(strat.portfolio)
+            legends.append(name)
+        except Exception as e:
+            print(f"⚠️ Error running strategy '{name}': {e}")
 
-# portfolio = vbt.Portfolio.from_signals(price, entries, exits)
-# portfolio.plot().show()
+    if not portfolios:
+        raise ValueError("No valid portfolios to compare.")
+
+    # 📊 Plot comparison
+    fig = vbt.Portfolio.plot_comparison(
+        portfolios,
+        labels=legends,
+        title="📈 Strategy Comparison",
+        template="plotly_dark",
+        height=800
+    )
+    fig.show()
+
+    # 📋 Stats comparison
+    stats_df = pd.concat(
+        [pf.stats().rename(lambda col: f"{legends[i]}: {col}") for i, pf in enumerate(portfolios)],
+        axis=1
+    )
+
+    if export_csv:
+        stats_df.to_csv(export_csv)
+        print(f"📁 Stats exported to: {export_csv}")
+
+    return stats_df
+sma = ss.SMACrossoverStrategy(price)
+rsi = ss.RSIStrategy(price)
+mom = ss.MomentumStrategy(price)
+
+compare_strategies(
+    SMA=sma,
+    RSI=rsi,
+    Momentum=mom
+).show()
