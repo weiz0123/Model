@@ -71,12 +71,12 @@ rsi = ss.RSIStrategy(price)
 mom = ss.MomentumStrategy(price)
 
 
-from strategy.DQNStrategy import DQNStrategy
+from strategy.MediumStrategy import DQNStrategy
 
 strategy = DQNStrategy(price)
 strategy.run()
 strategy.backtest()
-strategy.plot().show()
+strategy.plot()
 
 
 # run_plot(  

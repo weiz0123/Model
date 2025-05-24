@@ -3,12 +3,10 @@ print("vectorbt version:", vbt.__version__)
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import plotly.graph_objects as go
-
 from utils.eda_utils import dataset_info_summary, system_info
 from data.Data_PipLine import data_from_csv
 import strategy.SimpleStrategy as ss
-
+import plotly.graph_objects as go
 QQU = r"C:\Users\zhouw\OneDrive\Desktop\Model\data\qqu\QQU ETF Stock Price History.csv"
 df = data_from_csv(QQU)
 price = df['Close']
@@ -70,22 +68,13 @@ sma = ss.SMACrossoverStrategy(price)
 rsi = ss.RSIStrategy(price)
 mom = ss.MomentumStrategy(price)
 
+run_plot(  
+    SMA=sma,
+    RSI=rsi,
+    Momentum=mom)
 
-from strategy.DQNStrategy import DQNStrategy
-
-strategy = DQNStrategy(price)
-strategy.run()
-strategy.backtest()
-strategy.plot().show()
-
-
-# run_plot(  
-#     SMA=sma,
-#     RSI=rsi,
-#     Momentum=mom)
-
-# compare_strategies(
-#     SMA=sma,
-#     RSI=rsi,
-#     Momentum=mom
-# ).show()
+compare_strategies(
+    SMA=sma,
+    RSI=rsi,
+    Momentum=mom
+).show()

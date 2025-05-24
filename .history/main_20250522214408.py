@@ -70,15 +70,6 @@ sma = ss.SMACrossoverStrategy(price)
 rsi = ss.RSIStrategy(price)
 mom = ss.MomentumStrategy(price)
 
-
-from strategy.DQNStrategy import DQNStrategy
-
-strategy = DQNStrategy(price)
-strategy.run()
-strategy.backtest()
-strategy.plot().show()
-
-
 # run_plot(  
 #     SMA=sma,
 #     RSI=rsi,

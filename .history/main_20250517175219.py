@@ -3,12 +3,10 @@ print("vectorbt version:", vbt.__version__)
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import plotly.graph_objects as go
-
 from utils.eda_utils import dataset_info_summary, system_info
 from data.Data_PipLine import data_from_csv
 import strategy.SimpleStrategy as ss
-
+import plotly.graph_objects as go
 QQU = r"C:\Users\zhouw\OneDrive\Desktop\Model\data\qqu\QQU ETF Stock Price History.csv"
 df = data_from_csv(QQU)
 price = df['Close']
@@ -29,6 +27,7 @@ def compare_strategies(**strategies):
     if not portfolios:
         raise ValueError("No valid portfolios to compare.")
 
+    # ✅ Create a Plotly figure
     fig = go.Figure()
 
     for pf, label in zip(portfolios, legends):
@@ -47,6 +46,8 @@ def compare_strategies(**strategies):
         height=800
     )
 
+    fig.show()
+
     # 📋 Optional: Stats comparison
     stats_df = pd.concat(
         [pf.stats().rename(lambda name: f"{legends[i]}: {name}") for i, pf in enumerate(portfolios)],
@@ -57,35 +58,19 @@ def compare_strategies(**strategies):
     return fig
 
 
-def run_plot(**strategies):
-    for name, stradegy in  strategies.items():
-        try:
-            stradegy.run()
-            stradegy.plot().show()
-        except:
-            print(f"Error running strategy '{name}': {e}")
-            continue
+def run_plot(*strategies):
+    for stradegy in  strategies:
+         stradegy.backtest()
+         stradegy.plot().show()
 
 sma = ss.SMACrossoverStrategy(price)
 rsi = ss.RSIStrategy(price)
 mom = ss.MomentumStrategy(price)
 
+run_plot(sma, rsi, mom )
 
-from strategy.DQNStrategy import DQNStrategy
-
-strategy = DQNStrategy(price)
-strategy.run()
-strategy.backtest()
-strategy.plot().show()
-
-
-# run_plot(  
-#     SMA=sma,
-#     RSI=rsi,
-#     Momentum=mom)
-
-# compare_strategies(
-#     SMA=sma,
-#     RSI=rsi,
-#     Momentum=mom
-# ).show()
+compare_strategies(
+    SMA=sma,
+    RSI=rsi,
+    Momentum=mom
+).show()
