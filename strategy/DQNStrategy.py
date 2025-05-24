@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import random
-import numpy as np
 from collections import deque
 
 
@@ -31,6 +30,8 @@ class DQNAgent:
         self.batch_size = batch_size
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        print(f"[INFO] DQNAgent using device: {self.device}")  # <--- Add this line
+
         self.model = DQN(state_size, action_size).to(self.device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.criterion = nn.MSELoss()
@@ -53,10 +54,10 @@ class DQNAgent:
         batch = random.sample(self.memory, self.batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
 
-        states = torch.FloatTensor(states).to(self.device)
+        states = torch.FloatTensor(np.array(states)).to(self.device)
         actions = torch.LongTensor(actions).unsqueeze(1).to(self.device)
         rewards = torch.FloatTensor(rewards).to(self.device)
-        next_states = torch.FloatTensor(next_states).to(self.device)
+        next_states = torch.FloatTensor(np.array(next_states)).to(self.device)
         dones = torch.BoolTensor(dones).to(self.device)
 
         q_values = self.model(states).gather(1, actions)
@@ -94,48 +95,43 @@ class DQNTrainer:
         return self.agent
 
 
-# Helper: Convert vectorbt data into RL-friendly environment-like format
+# Helper: Convert vectorbt price series to RL-friendly dataset
 def make_rl_data(price_series, window=10):
     X = []
     for i in range(len(price_series) - window - 1):
-        state = price_series[i:i+window].values
-        next_state = price_series[i+1:i+1+window].values
-        reward = price_series[i+window+1] - price_series[i+window]  # price diff
+        state = price_series[i:i+window].values.astype(np.float32)
+        next_state = price_series[i+1:i+1+window].values.astype(np.float32)
+        reward = float(price_series[i+window+1] - price_series[i+window])
         done = i + window + 1 >= len(price_series) - 1
         X.append((state, 1 if reward > 0 else 0, reward, next_state, done))
     return X
 
 
 class DQNStrategy(BaseStrategy):
-    def __init__(self, price, window=10, episodes=10):
+    def __init__(self, price, window=10, episodes=50):
         super().__init__(price)
         self.window = window
         self.episodes = episodes
 
     def run(self):
-        # Prepare RL environment data
         env_data = make_rl_data(self.price, window=self.window)
         state_size = self.window
-        action_size = 3  # 0 = hold, 1 = buy
+        action_size = 3  # 0 = hold, 1 = buy, 2 = sell (or define as needed)
 
-        # Train the model
         trainer = DQNTrainer(state_size, action_size)
         trainer.train(env_data, episodes=self.episodes)
         agent = trainer.get_trained_agent()
 
-        # Generate signals
         entries = np.zeros(len(self.price), dtype=bool)
         exits = np.zeros(len(self.price), dtype=bool)
 
         for i in range(self.window, len(self.price) - 1):
-            state = self.price[i - self.window:i].values
+            state = self.price[i - self.window:i].values.astype(np.float32)
             action = agent.act(state, epsilon=0)  # deterministic during inference
             if action == 1:
                 entries[i] = True
-            else:
-                exits[i] = True  # simple inverse logic, improve as needed
+            elif action == 2:
+                exits[i] = True
 
-
-        print(len(entries), len(exits))
         self.entries = entries
         self.exits = exits

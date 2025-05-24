@@ -11,21 +11,9 @@ import strategy.SimpleStrategy as ss
 import numpy as np
 # QQU = r"C:\Users\zhouw\OneDrive\Desktop\Model\data\qqu\QQU ETF Stock Price History.csv"
 QQU =r"C:\Users\wzhou\Desktop\Model\data\qqu\QQU ETF Stock Price History.csv"
-QQU_df = data_from_csv(QQU)
-QQU_price = QQU_df['Close']
+df = data_from_csv(QQU)
+price = df['Close']
 
-SOXL =r"C:\Users\wzhou\Desktop\Model\data\SOXL\SOXL ETF Stock Price History (1).csv"
-SOXL_df = data_from_csv(SOXL)
-SOXL_price = SOXL_df['Close']
-
-
-TQQQ =r"C:\Users\wzhou\Desktop\Model\data\tqqq\TQQQ ETF Stock Price History (3).csv"
-TQQQ_df= data_from_csv(TQQQ)
-TQQQ_price = TQQQ_df['Close']
-
-SP500 =r"C:\Users\wzhou\Desktop\Model\data\sp500\S&P 500 Historical Data (1).csv"
-SP500_df= data_from_csv(SP500)
-SP500_price = SP500_df['Close']
 
 def compare_strategies(**strategies):
     portfolios = []
@@ -79,26 +67,40 @@ def run_plot(**strategies):
             print(f"Error running strategy '{name}': {e}")
             continue
 
+sma = ss.SMACrossoverStrategy(price)
+rsi = ss.RSIStrategy(price)
+mom = ss.MomentumStrategy(price)
 
 
-def exe(symbol_price):
-    sma = ss.SMACrossoverStrategy(symbol_price)
-    rsi = ss.RSIStrategy(symbol_price)
-    mom = ss.MomentumStrategy(symbol_price)
+from strategy.DQNStrategy import DQNStrategy
 
-    run_plot(  
-        SMA=sma,
-        RSI=rsi,
-        Momentum=mom)
-
-    compare_strategies(
-        SMA=sma,
-        RSI=rsi,
-        Momentum=mom
-    ).show()
+# strategy = DQNStrategy(price)
+# strategy.run()
+# strategy.backtest()
+# strategy.plot().show()
 
 
-# exe(QQU_price)
-# exe(SOXL_price)
-exe(SP500_price)
+def make_rl_data( price_series, window=10):
+    X = []
+    for i in range(len(price_series) - window - 1):
+        state = price_series[i:i+window].values.astype(np.float32)
+        next_state = price_series[i+1:i+1+window].values.astype(np.float32)
+        reward = float(price_series[i+window+1] - price_series[i+window])
+        done = i + window + 1 >= len(price_series) - 1
+        X.append((state, 1 if reward > 0 else 0, reward, next_state, done))
+    return X
+print(price)
+x = make_rl_data(price, window=10)
+print(x[0])
+print(x[1])
+print(x[2])
+# run_plot(  
+#     SMA=sma,
+#     RSI=rsi,
+#     Momentum=mom)
 
+# compare_strategies(
+#     SMA=sma,
+#     RSI=rsi,
+#     Momentum=mom
+# ).show()

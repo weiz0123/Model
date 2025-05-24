@@ -12,13 +12,17 @@ def data_from_csv(file_path: str):
     df.set_index('Date', inplace=True)
 
     # Remove commas and convert columns
-    df['Vol.'] = df['Vol.'].str.replace('M', 'e6').str.replace('K', 'e3').str.replace(',', '')
-    df['Vol.'] = df['Vol.'].astype(float)
-    df['Change %'] = df['Change %'].str.replace('%', '').astype(float) / 100
+    if df['Vol.'].notna().any():
+        df['Vol.'] = df['Vol.'].str.replace('M', 'e6').str.replace('K', 'e3').str.replace(',', '')
+        df['Vol.'] = df['Vol.'].astype(float)
+    else:
+        df['Vol.'] = 0.0
+    df['Change %'] = df['Change %'].str.replace('%', '', regex=False).str.replace(',', '').astype(float) / 100
+
 
     # Convert remaining numeric columns
     cols_to_float = ['Price', 'Open', 'High', 'Low']
-    df[cols_to_float] = df[cols_to_float].astype(float)
+    df[cols_to_float] = df[cols_to_float].replace(',', '', regex=True).astype(float)
 
     # Optional: rename columns for vectorbt convention
     df.rename(columns={
