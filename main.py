@@ -8,8 +8,9 @@ import plotly.graph_objects as go
 from utils.eda_utils import dataset_info_summary, system_info
 from data.Data_PipLine import data_from_csv
 import strategy.SimpleStrategy as ss
+import strategy.PyramidFamilyStrategy as pf
 import numpy as np
-# QQU = r"C:\Users\zhouw\OneDrive\Desktop\Model\data\qqu\QQU ETF Stock Price History.csv"
+
 QQU =r"C:\Users\wzhou\Desktop\Model\data\qqu\QQU ETF Stock Price History.csv"
 QQU_df = data_from_csv(QQU)
 QQU_price = QQU_df['Close']
@@ -22,6 +23,7 @@ SOXL_price = SOXL_df['Close']
 TQQQ =r"C:\Users\wzhou\Desktop\Model\data\tqqq\TQQQ ETF Stock Price History (3).csv"
 TQQQ_df= data_from_csv(TQQQ)
 TQQQ_price = TQQQ_df['Close']
+
 
 SP500 =r"C:\Users\wzhou\Desktop\Model\data\sp500\S&P 500 Historical Data (1).csv"
 SP500_df= data_from_csv(SP500)
@@ -75,13 +77,12 @@ def run_plot(**strategies):
         try:
             stradegy.run()
             stradegy.plot().show()
-        except:
-            print(f"Error running strategy '{name}': {e}")
+        except :
+            print(f"Error running strategy '{name}': {e}") # type: ignore
             continue
 
 
-
-def exe(symbol_price):
+def simple_strategy_exe(symbol_price):
     sma = ss.SMACrossoverStrategy(symbol_price)
     rsi = ss.RSIStrategy(symbol_price)
     mom = ss.MomentumStrategy(symbol_price)
@@ -96,9 +97,18 @@ def exe(symbol_price):
         RSI=rsi,
         Momentum=mom
     ).show()
+def pyramid_strategy_exe(symbol_price):
+    fipy = pf.FiPyramidStrategy(  
+            symbol_price,
+            initial_drop_pct=0.03,
+            fib_ratios=[1.0, 2.0, 3.33],      # corresponds to 3%, 6%, 10% drop
+            buy_pcts=[0.02, 0.05, 0.10],      # corresponding buy sizes
+            sell_rise_pct=0.05                # fixed sell target)
+        )
+    run_plot(fipy=fipy)
 
+# simple_strategy_exe(QQU_price)
+# simple_strategy_exe(SOXL_price)
+# simple_strategy_exe(SP500_price)
 
-# exe(QQU_price)
-# exe(SOXL_price)
-exe(SP500_price)
-
+pyramid_strategy_exe(QQU_price)
